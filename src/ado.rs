@@ -295,11 +295,36 @@ mod test {
         Ok(())
     }
 
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connect-to-a-named-instance-of-sql-server
     #[test]
     fn connect_to_named_sql_server_instance() -> crate::Result<()> {
         let input = r#"Data Source=MySqlServer\MSSQL1;"#;
         let ado: AdoNetString = input.parse()?;
         assert_kv(&ado, "Data Source", r#"MySqlServer\MSSQL1"#);
+        Ok(())
+    }
+
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#oledb-connection-string-syntax
+    #[test]
+    fn oledb_connection_string_syntax() -> crate::Result<()> {
+        let input = r#"Provider=Microsoft.Jet.OLEDB.4.0; Data Source=d:\Northwind.mdb;User ID=Admin;Password=;"#;
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Provider", r#"Microsoft.Jet.OLEDB.4.0"#);
+        assert_kv(&ado, "Data Source", r#"d:\Northwind.mdb"#);
+        assert_kv(&ado, "User ID", r#"Admin"#);
+        assert_kv(&ado, "Password", r#""#);
+
+        let input = r#"Provider=Microsoft.Jet.OLEDB.4.0;Data Source=d:\Northwind.mdb;Jet OLEDB:System Database=d:\NorthwindSystem.mdw;User ID=*****;Password=*****;"#;
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Provider", r#"Microsoft.Jet.OLEDB.4.0"#);
+        assert_kv(&ado, "Data Source", r#"d:\Northwind.mdb"#);
+        assert_kv(
+            &ado,
+            "Jet OLEDB:System Database",
+            r#"d:\NorthwindSystem.mdw"#,
+        );
+        assert_kv(&ado, "User ID", r#"*****"#);
+        assert_kv(&ado, "Password", r#"*****"#);
         Ok(())
     }
 }

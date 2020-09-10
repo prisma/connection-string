@@ -1,38 +1,11 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use crate::bail;
+use crate::{bail, ensure};
 
-// use crate::utils::{bail, ensure};
-
-// NOTE(yosh): ESCAPING is done by wrapping quotes in other quotes.
-// ```
-// password='somepass"word'
-// ```
-//
-// From [Ado net connection string remarks](https://docs.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring?redirectedfrom=MSDN&view=dotnet-plat-ext-3.1#remarks):
-//
-// The basic format of a connection string includes a series of keyword/value
-// pairs separated by semicolons. The equal sign (=) connects each keyword and
-// its value. To include values that contain a semicolon, single-quote
-// character, or double-quote character, the value must be enclosed in double
-// quotation marks. If the value contains both a semicolon and a double-quote
-// character, the value can be enclosed in single quotation marks. The single
-// quotation mark is also useful if the value starts with a double-quote
-// character. Conversely, the double quotation mark can be used if the value
-// starts with a single quotation mark. If the value contains both single-quote
-// and double-quote characters, the quotation mark character used to enclose the
-// value must be doubled every time it occurs within the value.
-//
-// To include preceding or trailing spaces in the string value, the value must
-// be enclosed in either single quotation marks or double quotation marks. Any
-// leading or trailing spaces around integer, Boolean, or enumerated values are
-// ignored, even if enclosed in quotation marks. However, spaces within a string
-// literal keyword or value are preserved. Single or double quotation marks may
-// be used within a connection string without using delimiters (for example,
-// Data Source= my'Server or Data Source= my"Server), unless a quotation mark
-// character is the first or last character in the value.
-
+/// An ADO.net connection string
+///
+/// [Read more](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax)
 #[derive(Debug)]
 pub struct AdoNetString {
     pairs: HashMap<String, String>,
@@ -46,8 +19,75 @@ impl FromStr for AdoNetString {
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let mut lexer = Lexer::tokenize(input)?;
-        todo!();
+        let mut pairs = HashMap::new();
+
+        // Iterate over `key=value` pairs.
+        for n in 0.. {
+            if lexer.peek().kind() != &TokenKind::Eof {
+                // [property=value[;property=value][;]]
+                //                 ^
+                if n != 0 {
+                    let err = "Key-value pairs must be separated by a `;`";
+                    ensure!(lexer.next().kind() == &TokenKind::Semi, err);
+
+                    // [property=value[;property=value][;]]
+                    //                                  ^^^
+                    if lexer.peek().kind() == &TokenKind::Eof {
+                        break;
+                    }
+                }
+
+                // [property=value[;property=value][;]]
+                //  ^^^^^^^^
+                let key = read_ident(&mut lexer)?;
+                ensure!(!key.is_empty(), "Key must not be empty");
+
+                // [property=value[;property=value][;]]
+                //          ^
+                let err = "key-value pairs must be joined by a `=`";
+                ensure!(lexer.next().kind() == &TokenKind::Eq, err);
+
+                // [property=value[;property=value][;]]
+                //           ^^^^^
+                let value = read_ident(&mut lexer)?;
+                ensure!(!value.is_empty(), "Value must not be empty");
+
+                pairs.insert(key, value);
+            }
+        }
+        Ok(Self { pairs })
     }
+}
+
+/// Read either a valid key or value from the lexer.
+fn read_ident(lexer: &mut Lexer) -> crate::Result<String> {
+    let mut output = String::new();
+    loop {
+        let Token { kind, loc } = lexer.peek();
+        match kind {
+            TokenKind::Atom(c) => {
+                let _ = lexer.next();
+                output.push(c);
+            }
+            TokenKind::Escaped(seq) => {
+                let _ = lexer.next();
+                output.extend(seq);
+            }
+            TokenKind::Semi => break,
+            TokenKind::Eq => break,
+            TokenKind::Newline => continue, // NOTE(yosh): unsure if this is the correct behavior
+            TokenKind::Whitespace => {
+                let _ = lexer.next();
+                match output.len() {
+                    0 => continue, // ignore leading whitespace
+                    _ => output.push(' '),
+                }
+            }
+            TokenKind::Eof => {}
+        }
+    }
+    output = output.trim_end().to_owned(); // remove trailing whitespace
+    Ok(output)
 }
 
 #[derive(Debug, Clone)]
@@ -61,21 +101,24 @@ impl Token {
     fn new(kind: TokenKind, loc: Location) -> Self {
         Self { kind, loc }
     }
+
+    fn kind(&self) -> &TokenKind {
+        &self.kind
+    }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum TokenKind {
-    DQuote,
-    SQuote,
     Semi,
     Eq,
-    LBrace,
-    RBrace,
     Atom(char),
+    Escaped(Vec<char>),
     Newline,
+    Whitespace,
     Eof,
 }
 
+#[derive(Debug)]
 struct Lexer {
     tokens: Vec<Token>,
 }
@@ -89,15 +132,62 @@ impl Lexer {
             let old_input = input;
             let mut chars = input.chars();
             let kind = match chars.next().unwrap() {
-                '"' => TokenKind::DQuote,  // TODO read an escape sequence,
-                '\'' => TokenKind::SQuote, // TODO read an escape sequence,
+                '"' => {
+                    let mut buf = Vec::new();
+                    loop {
+                        match chars.next() {
+                            None => bail!("unclosed double quote"),
+                            // When we read a double quote inside a double quote
+                            // we need to lookahead to determine whether it's an
+                            // escape sequence or a closing delimiter.
+                            Some('"') => match lookahead(&chars) {
+                                Some('"') => {
+                                    if buf.len() == 0 {
+                                        break;
+                                    }
+                                    let _ = chars.next();
+                                    buf.push('"');
+                                    buf.push('"');
+                                }
+                                Some(_) | None => break,
+                            },
+                            Some(c) if c.is_ascii() => buf.push(c),
+                            _ => bail!("Invalid ado.net token"),
+                        }
+                    }
+                    TokenKind::Escaped(buf)
+                }
+                '\'' => {
+                    let mut buf = Vec::new();
+                    loop {
+                        match chars.next() {
+                            None => bail!("unclosed single quote"),
+                            // When we read a single quote inside a single quote
+                            // we need to lookahead to determine whether it's an
+                            // escape sequence or a closing delimiter.
+                            Some('\'') => match lookahead(&chars) {
+                                Some('\'') => {
+                                    if buf.len() == 0 {
+                                        break;
+                                    }
+                                    let _ = chars.next();
+                                    buf.push('\'');
+                                    buf.push('\'');
+                                }
+                                Some(_) | None => break,
+                            },
+                            Some(c) if c.is_ascii() => buf.push(c),
+                            _ => bail!("Invalid ado.net token"),
+                        }
+                    }
+                    TokenKind::Escaped(buf)
+                }
                 ';' => TokenKind::Semi,
                 '=' => TokenKind::Eq,
-                '(' => TokenKind::LBrace,
-                ')' => TokenKind::RBrace,
                 '\n' => TokenKind::Newline,
-                char if char.is_alphanumeric() => TokenKind::Atom(char),
-                char => bail!("Invalid character found"),
+                ' ' => TokenKind::Whitespace,
+                char if char.is_ascii_alphanumeric() => TokenKind::Atom(char),
+                char => bail!("Invalid character found: {}", char),
             };
             tokens.push(Token { kind, loc });
             input = chars.as_str();
@@ -133,6 +223,12 @@ impl Lexer {
     }
 }
 
+/// Look at the next char in the iterator.
+fn lookahead(iter: &std::str::Chars<'_>) -> Option<char> {
+    let s = iter.as_str();
+    s.chars().next()
+}
+
 /// Track the location of the Token inside the string.
 #[derive(Copy, Clone, Default, Debug)]
 pub(crate) struct Location {
@@ -148,6 +244,7 @@ impl Location {
 #[cfg(test)]
 mod test {
     use super::AdoNetString;
+
     #[test]
     fn basic() -> crate::Result<()> {
         let s: AdoNetString = "Data Source=MSSQL1;Initial Catalog=AdventureWorks;".parse()?;

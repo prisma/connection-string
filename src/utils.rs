@@ -28,6 +28,6 @@ macro_rules! bail {
     };
 
     ($fmt:expr, $($arg:tt)*) => {
-        return Err($crate::Error::new(format!($fmt, $($arg)*).into()));
+        return Err($crate::Error::new(&*format!($fmt, $($arg)*)));
     };
 }

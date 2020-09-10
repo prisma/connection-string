@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 
 use crate::{bail, ensure};
@@ -9,6 +10,20 @@ use crate::{bail, ensure};
 #[derive(Debug)]
 pub struct AdoNetString {
     pairs: HashMap<String, String>,
+}
+
+impl Deref for AdoNetString {
+    type Target = HashMap<String, String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pairs
+    }
+}
+
+impl DerefMut for AdoNetString {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.pairs
+    }
 }
 
 // NOTE(yosh): Unfortunately we can't parse using `split(';')` because JDBC
@@ -23,37 +38,40 @@ impl FromStr for AdoNetString {
 
         // Iterate over `key=value` pairs.
         for n in 0.. {
-            if lexer.peek().kind() != &TokenKind::Eof {
-                // [property=value[;property=value][;]]
-                //                 ^
-                if n != 0 {
-                    let err = "Key-value pairs must be separated by a `;`";
-                    ensure!(lexer.next().kind() == &TokenKind::Semi, err);
-
-                    // [property=value[;property=value][;]]
-                    //                                  ^^^
-                    if lexer.peek().kind() == &TokenKind::Eof {
-                        break;
-                    }
-                }
-
-                // [property=value[;property=value][;]]
-                //  ^^^^^^^^
-                let key = read_ident(&mut lexer)?;
-                ensure!(!key.is_empty(), "Key must not be empty");
-
-                // [property=value[;property=value][;]]
-                //          ^
-                let err = "key-value pairs must be joined by a `=`";
-                ensure!(lexer.next().kind() == &TokenKind::Eq, err);
-
-                // [property=value[;property=value][;]]
-                //           ^^^^^
-                let value = read_ident(&mut lexer)?;
-                ensure!(!value.is_empty(), "Value must not be empty");
-
-                pairs.insert(key, value);
+            // [property=[value][;property=value][;]]
+            //                                       ^
+            if lexer.peek().kind() == &TokenKind::Eof {
+                break;
             }
+
+            // [property=[value][;property=value][;]]
+            //                   ^
+            if n != 0 {
+                let err = "Key-value pairs must be separated by a `;`";
+                ensure!(lexer.next().kind() == &TokenKind::Semi, err);
+
+                // [property=value[;property=value][;]]
+                //                                  ^
+                if lexer.peek().kind() == &TokenKind::Eof {
+                    break;
+                }
+            }
+
+            // [property=[value][;property=value][;]]
+            //  ^^^^^^^^
+            let key = read_ident(&mut lexer)?;
+            ensure!(!key.is_empty(), "Key must not be empty");
+
+            // [property=[value][;property=value][;]]
+            //          ^
+            let err = "key-value pairs must be joined by a `=`";
+            ensure!(lexer.next().kind() == &TokenKind::Eq, err);
+
+            // [property=[value][;property=value][;]]
+            //           ^^^^^
+            let value = read_ident(&mut lexer)?;
+
+            pairs.insert(key, value);
         }
         Ok(Self { pairs })
     }
@@ -75,7 +93,10 @@ fn read_ident(lexer: &mut Lexer) -> crate::Result<String> {
             }
             TokenKind::Semi => break,
             TokenKind::Eq => break,
-            TokenKind::Newline => continue, // NOTE(yosh): unsure if this is the correct behavior
+            TokenKind::Newline => {
+                let _ = lexer.next();
+                continue; // NOTE(yosh): unsure if this is the correct behavior
+            }
             TokenKind::Whitespace => {
                 let _ = lexer.next();
                 match output.len() {
@@ -83,7 +104,7 @@ fn read_ident(lexer: &mut Lexer) -> crate::Result<String> {
                     _ => output.push(' '),
                 }
             }
-            TokenKind::Eof => {}
+            TokenKind::Eof => break,
         }
     }
     output = output.trim_end().to_owned(); // remove trailing whitespace
@@ -186,7 +207,7 @@ impl Lexer {
                 '=' => TokenKind::Eq,
                 '\n' => TokenKind::Newline,
                 ' ' => TokenKind::Whitespace,
-                char if char.is_ascii_alphanumeric() => TokenKind::Atom(char),
+                char if char.is_ascii() => TokenKind::Atom(char),
                 char => bail!("Invalid character found: {}", char),
             };
             tokens.push(Token { kind, loc });
@@ -245,9 +266,40 @@ impl Location {
 mod test {
     use super::AdoNetString;
 
+    fn assert_kv(ado: &AdoNetString, key: &str, value: &str) {
+        assert_eq!(ado.get(key), Some(&value.to_owned()));
+    }
+
+    // Source: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#windows-authentication-with-sqlclient
     #[test]
-    fn basic() -> crate::Result<()> {
-        let s: AdoNetString = "Data Source=MSSQL1;Initial Catalog=AdventureWorks;".parse()?;
+    fn windows_auth_with_sql_client() -> crate::Result<()> {
+        let input = "Persist Security Info=False;Integrated Security=true;\nInitial Catalog=AdventureWorks;Server=MSSQL1";
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Persist Security Info", "False");
+        assert_kv(&ado, "Integrated Security", "true");
+        assert_kv(&ado, "Server", "MSSQL1");
+        assert_kv(&ado, "Initial Catalog", "AdventureWorks");
+        Ok(())
+    }
+
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#sql-server-authentication-with-sqlclient
+    #[test]
+    fn sql_server_auth_with_sql_client() -> crate::Result<()> {
+        let input = "Persist Security Info=False;User ID=*****;Password=*****;Initial Catalog=AdventureWorks;Server=MySqlServer";
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Persist Security Info", "False");
+        assert_kv(&ado, "User ID", "*****");
+        assert_kv(&ado, "Password", "*****");
+        assert_kv(&ado, "Initial Catalog", "AdventureWorks");
+        assert_kv(&ado, "Server", "MySqlServer");
+        Ok(())
+    }
+
+    #[test]
+    fn connect_to_named_sql_server_instance() -> crate::Result<()> {
+        let input = r#"Data Source=MySqlServer\MSSQL1;"#;
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Data Source", r#"MySqlServer\MSSQL1"#);
         Ok(())
     }
 }

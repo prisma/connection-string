@@ -271,6 +271,7 @@ mod test {
     }
 
     // Source: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#windows-authentication-with-sqlclient
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#windows-authentication-with-sqlclient
     #[test]
     fn windows_auth_with_sql_client() -> crate::Result<()> {
         let input = "Persist Security Info=False;Integrated Security=true;\nInitial Catalog=AdventureWorks;Server=MSSQL1";
@@ -325,6 +326,38 @@ mod test {
         );
         assert_kv(&ado, "User ID", r#"*****"#);
         assert_kv(&ado, "Password", r#"*****"#);
+        Ok(())
+    }
+
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#using-datadirectory-to-connect-to-accessjet
+    #[test]
+    fn connect_to_access_jet() -> crate::Result<()> {
+        let input = r#"Provider=Microsoft.Jet.OLEDB.4.0;  
+                       Data Source=|DataDirectory|\Northwind.mdb;  
+                       Jet OLEDB:System Database=|DataDirectory|\System.mdw;"#;
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Data Source", r#"|DataDirectory|\Northwind.mdb"#);
+        assert_kv(&ado, "Provider", r#"Microsoft.Jet.OLEDB.4.0"#);
+        assert_kv(
+            &ado,
+            "Jet OLEDB:System Database",
+            r#"|DataDirectory|\System.mdw"#,
+        );
+        Ok(())
+    }
+
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel
+    #[test]
+    fn connect_to_excel() -> crate::Result<()> {
+        let input = r#"Provider=Microsoft.Jet.OLEDB.4.0;Data Source=D:\MyExcel.xls;Extended Properties=""Excel 8.0;HDR=Yes;IMEX=1"""#;
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Provider", r#"Microsoft.Jet.OLEDB.4.0"#);
+        assert_kv(&ado, "Data Source", r#"D:\MyExcel.xls"#);
+        assert_kv(
+            &ado,
+            "Extended Properties",
+            r#"""Excel 8.0;HDR=Yes;IMEX=1"""#,
+        );
         Ok(())
     }
 }

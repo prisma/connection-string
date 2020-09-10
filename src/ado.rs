@@ -155,27 +155,33 @@ impl Lexer {
             let kind = match chars.next().unwrap() {
                 '"' => {
                     let mut buf = Vec::new();
-                    loop {
-                        match chars.next() {
-                            None => bail!("unclosed double quote"),
-                            // When we read a double quote inside a double quote
-                            // we need to lookahead to determine whether it's an
-                            // escape sequence or a closing delimiter.
-                            Some('"') => match lookahead(&chars) {
-                                Some('"') => {
-                                    if buf.len() == 0 {
-                                        break;
+
+                    // Handle the case where we encounter a random `""`.
+                    if let Some('"') = lookahead(&chars) {
+                        let _ = chars.next();
+                        buf.push('"');
+                        buf.push('"');
+                    } else {
+                        loop {
+                            match chars.next() {
+                                None => bail!("unclosed double quote"),
+                                // When we read a double quote inside a double quote
+                                // we need to lookahead to determine whether it's an
+                                // escape sequence or a closing delimiter.
+                                Some('"') => match lookahead(&chars) {
+                                    Some('"') => {
+                                        let _ = chars.next();
+                                        buf.push('"');
+                                        buf.push('"');
                                     }
-                                    let _ = chars.next();
-                                    buf.push('"');
-                                    buf.push('"');
-                                }
-                                Some(_) | None => break,
-                            },
-                            Some(c) if c.is_ascii() => buf.push(c),
-                            _ => bail!("Invalid ado.net token"),
+                                    Some(_) | None => break,
+                                },
+                                Some(c) if c.is_ascii() => buf.push(c),
+                                _ => bail!("Invalid ado.net token"),
+                            }
                         }
                     }
+
                     TokenKind::Escaped(buf)
                 }
                 '\'' => {
@@ -270,7 +276,6 @@ mod test {
         assert_eq!(ado.get(key), Some(&value.to_owned()));
     }
 
-    // Source: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#windows-authentication-with-sqlclient
     // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#windows-authentication-with-sqlclient
     #[test]
     fn windows_auth_with_sql_client() -> crate::Result<()> {
@@ -347,6 +352,7 @@ mod test {
     }
 
     // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel
+    // TODO: support a string that's enclosed by two double quotes.
     #[test]
     fn connect_to_excel() -> crate::Result<()> {
         let input = r#"Provider=Microsoft.Jet.OLEDB.4.0;Data Source=D:\MyExcel.xls;Extended Properties=""Excel 8.0;HDR=Yes;IMEX=1"""#;

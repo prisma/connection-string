@@ -6,6 +6,13 @@ use crate::{bail, ensure};
 
 /// An ADO.net connection string
 ///
+/// # Limitations
+///
+/// This parser does not support [Odbc connection
+/// strings](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#odbc-connection-strings)
+/// and [Excel connection strings with extended
+/// properties](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel).
+///
 /// [Read more](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax)
 #[derive(Debug)]
 pub struct AdoNetString {
@@ -61,6 +68,7 @@ impl FromStr for AdoNetString {
             //  ^^^^^^^^
             let key = read_ident(&mut lexer)?;
             ensure!(!key.is_empty(), "Key must not be empty");
+            dbg!(&key);
 
             // [property=[value][;property=value][;]]
             //          ^
@@ -346,18 +354,44 @@ mod test {
         Ok(())
     }
 
-    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel
+    // NOTE(yosh): we do not support Excel connection strings yet because the
+    // double quote escaping is a small nightmare to parse.
+    // // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel
+    // #[test]
+    // fn connect_to_excel() -> crate::Result<()> {
+    //     let input = r#"Provider=Microsoft.Jet.OLEDB.4.0;Data Source=D:\MyExcel.xls;Extended Properties=""Excel 8.0;HDR=Yes;IMEX=1"""#;
+    //     let ado: AdoNetString = input.parse()?;
+    //     assert_kv(&ado, "Provider", r#"Microsoft.Jet.OLEDB.4.0"#);
+    //     assert_kv(&ado, "Data Source", r#"D:\MyExcel.xls"#);
+    //     assert_kv(
+    //         &ado,
+    //         "Extended Properties",
+    //         r#"""Excel 8.0;HDR=Yes;IMEX=1"""#,
+    //     );
+    //     Ok(())
+    // }
+
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#data-shape-provider-connection-string-syntax
     #[test]
-    fn connect_to_excel() -> crate::Result<()> {
-        let input = r#"Provider=Microsoft.Jet.OLEDB.4.0;Data Source=D:\MyExcel.xls;Extended Properties=""Excel 8.0;HDR=Yes;IMEX=1"""#;
+    fn data_shape_provider() -> crate::Result<()> {
+        let input = r#"Provider=MSDataShape;Data Provider=SQLOLEDB;Data Source=(local);Initial Catalog=pubs;Integrated Security=SSPI;"#;
         let ado: AdoNetString = input.parse()?;
-        assert_kv(&ado, "Provider", r#"Microsoft.Jet.OLEDB.4.0"#);
-        assert_kv(&ado, "Data Source", r#"D:\MyExcel.xls"#);
-        assert_kv(
-            &ado,
-            "Extended Properties",
-            r#"""Excel 8.0;HDR=Yes;IMEX=1"""#,
-        );
+        assert_kv(&ado, "Provider", r#"MSDataShape"#);
+        assert_kv(&ado, "Data Provider", r#"SQLOLEDB"#);
+        assert_kv(&ado, "Data Source", r#"(local)"#);
+        assert_kv(&ado, "Initial Catalog", r#"pubs"#);
+        assert_kv(&ado, "Integrated Security", r#"SSPI"#);
+        Ok(())
+    }
+
+    // NOTE(yosh): we do not support ODBC connection strings because the first part of the  
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#odbc-connection-strings
+    #[test]
+    fn odbc_connection_strings() -> crate::Result<()> {
+        let input = r#"Driver={Microsoft Text Driver (*.txt; *.csv)};DBQ=d:\bin"#;
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Driver", r#"{Microsoft Test Driver (*.txt; *.csv)}"#);
+        assert_kv(&ado, "DBQ", r#"d:\bin"#);
         Ok(())
     }
 }

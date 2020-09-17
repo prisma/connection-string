@@ -1,9 +1,11 @@
 #[derive(Debug)]
-pub struct Error {}
+pub struct Error {
+    msg: String,
+}
 
 /// Create a new Error.
 impl Error {
-    pub fn new(_s: &str) -> Self {
-        Self {}
+    pub fn new(msg: &str) -> Self {
+        Self {msg: msg.to_owned() }
     }
 }

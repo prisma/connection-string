@@ -9,7 +9,7 @@ use crate::{bail, ensure};
 ///
 /// # Format
 ///
-/// ```
+/// ```txt
 /// jdbc:sqlserver://[serverName[\instanceName][:portNumber]][;property=value[;property=value]]
 /// ```
 #[derive(Debug, PartialEq, Eq, Clone)]

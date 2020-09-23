@@ -26,6 +26,6 @@ impl From<std::num::ParseIntError> for Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.msg)
+        write!(f, "Conversion error: {}", self.msg)
     }
 }

@@ -89,7 +89,7 @@ impl FromStr for AdoNetString {
 fn read_ident(lexer: &mut Lexer) -> crate::Result<String> {
     let mut output = String::new();
     loop {
-        let Token { kind, loc } = lexer.peek();
+        let Token { kind, .. } = lexer.peek();
         match kind {
             TokenKind::Atom(c) => {
                 let _ = lexer.next();
@@ -218,7 +218,7 @@ impl Lexer {
                 char if char.is_ascii() => TokenKind::Atom(char),
                 char => bail!("Invalid character found: {}", char),
             };
-            tokens.push(Token { kind, loc });
+            tokens.push(Token::new(kind, loc));
             input = chars.as_str();
 
             let consumed = old_input.len() - input.len();
@@ -235,11 +235,6 @@ impl Lexer {
             kind: TokenKind::Eof,
             loc: Location::default(),
         })
-    }
-
-    /// Push a token back onto the queue.
-    pub(crate) fn push(&mut self, token: Token) {
-        self.tokens.push(token);
     }
 
     /// Peek at the next token in the queue.
@@ -384,7 +379,7 @@ mod test {
         Ok(())
     }
 
-    // NOTE(yosh): we do not support ODBC connection strings because the first part of the  
+    // NOTE(yosh): we do not support ODBC connection strings because the first part of the
     // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#odbc-connection-strings
     #[test]
     fn odbc_connection_strings() -> crate::Result<()> {

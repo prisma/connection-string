@@ -12,9 +12,13 @@
 
 mod ado;
 mod error;
+mod jdbc;
 
 #[macro_use]
 mod utils;
+
+pub use ado::AdoNetString;
+pub use jdbc::JdbcString;
 
 pub use error::Error;
 type Result<T> = std::result::Result<T, Error>;

@@ -206,7 +206,20 @@ impl Lexer {
                                 Some(_) | None => break,
                             },
                             Some(c) if c.is_ascii() => buf.push(c),
-                            _ => bail!("Invalid ado.net token"),
+                            Some(c) => bail!("Invalid ado.net token `{}`", c),
+                        }
+                    }
+                    TokenKind::Escaped(buf)
+                }
+                '{' => {
+                    let mut buf = Vec::new();
+                    // Read alphanumeric ASCII including whitespace until we find a closing curly.
+                    loop {
+                        match chars.next() {
+                            None => bail!("unclosed escape literal"),
+                            Some('}') => break,
+                            Some(c) if c.is_ascii() => buf.push(c),
+                            Some(c) => bail!("Invalid ado.net token `{}`", c),
                         }
                     }
                     TokenKind::Escaped(buf)
@@ -385,7 +398,7 @@ mod test {
     fn odbc_connection_strings() -> crate::Result<()> {
         let input = r#"Driver={Microsoft Text Driver (*.txt; *.csv)};DBQ=d:\bin"#;
         let ado: AdoNetString = input.parse()?;
-        assert_kv(&ado, "Driver", r#"{Microsoft Test Driver (*.txt; *.csv)}"#);
+        assert_kv(&ado, "Driver", r#"Microsoft Text Driver (*.txt; *.csv)"#);
         assert_kv(&ado, "DBQ", r#"d:\bin"#);
         Ok(())
     }

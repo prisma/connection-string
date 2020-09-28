@@ -187,7 +187,7 @@ impl Lexer {
             let old_input = input;
             let mut chars = input.chars();
             let kind = match chars.next().unwrap() {
-                c if c.is_ascii_whitespace() => continue,
+                // c if c.is_ascii_whitespace() => continue,
                 ':' => TokenKind::Colon,
                 '=' => TokenKind::Eq,
                 '\\' => TokenKind::BSlash,
@@ -201,13 +201,14 @@ impl Lexer {
                             None => bail!("unclosed escape literal"),
                             Some('}') => break,
                             Some(c) if c.is_ascii() => buf.push(c),
-                            _ => bail!("Invalid JDBC token"),
+                            Some(c) => bail!("Invalid JDBC token `{}`", c),
                         }
                     }
                     TokenKind::Escaped(buf)
                 }
                 c if c.is_ascii_alphanumeric() => TokenKind::Atom(c),
-                c => bail!("Invalid JDBC token: '{}'", c),
+                c if c.is_ascii_whitespace() => TokenKind::Atom(c),
+                c => bail!("Invalid JDBC token `{}`", c),
             };
             tokens.push(Token { kind, loc });
             input = chars.as_str();
@@ -358,6 +359,22 @@ mod test {
             err.to_string(),
             "Conversion error: Invalid JDBC sub-protocol"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn whitespace() -> crate::Result<()> {
+        dbg!("start");
+        let conn: JdbcString =
+            r#"jdbc:sqlserver://server\instance:80;key=value;foo=bar;user id=musti naukio"#
+                .parse()?;
+        assert_eq!(conn.sub_protocol(), "jdbc:sqlserver");
+        assert_eq!(conn.server_name(), Some(r#"server"#));
+        assert_eq!(conn.instance_name(), Some("instance"));
+        assert_eq!(conn.port(), Some(80));
+
+        let kv = conn.properties();
+        assert_eq!(kv.get("user id"), Some(&"musti naukio".to_string()));
         Ok(())
     }
 }

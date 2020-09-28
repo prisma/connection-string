@@ -402,4 +402,15 @@ mod test {
         assert_kv(&ado, "DBQ", r#"d:\bin"#);
         Ok(())
     }
+
+    // https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#oracle-connection-strings
+    #[test]
+    fn oracle_connection_strings() -> crate::Result<()> {
+        let input = "Data Source=Oracle9i;User ID=*****;Password=*****;";
+        let ado: AdoNetString = input.parse()?;
+        assert_kv(&ado, "Data Source", "Oracle9i");
+        assert_kv(&ado, "User ID", "*****");
+        assert_kv(&ado, "Password", "*****");
+        Ok(())
+    }
 }

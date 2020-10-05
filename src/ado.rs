@@ -4,14 +4,15 @@ use std::str::FromStr;
 
 use crate::{bail, ensure};
 
-/// An ADO.net connection string
+/// An ADO.net connection string.
+///
+/// Keywords are not case-sensitive. Values, however, may be case-sensitive,
+/// depending on the data source. Both keywords and values may contain whitespace
+/// characters.
 ///
 /// # Limitations
 ///
-/// This parser does not support [Odbc connection
-/// strings](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#odbc-connection-strings)
-/// and [Excel connection strings with extended
-/// properties](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel).
+/// This parser does not support [Excel connection strings with extended properties](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#connecting-to-excel).
 ///
 /// [Read more](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax)
 #[derive(Debug)]
@@ -78,6 +79,7 @@ impl FromStr for AdoNetString {
             //           ^^^^^
             let value = read_ident(&mut lexer)?;
 
+            let key = key.to_lowercase();
             pairs.insert(key, value);
         }
         Ok(Self { pairs })
@@ -282,7 +284,7 @@ mod test {
     use super::AdoNetString;
 
     fn assert_kv(ado: &AdoNetString, key: &str, value: &str) {
-        assert_eq!(ado.get(key), Some(&value.to_owned()));
+        assert_eq!(ado.get(&key.to_lowercase()), Some(&value.to_owned()));
     }
 
     // Source: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/connection-string-syntax#windows-authentication-with-sqlclient

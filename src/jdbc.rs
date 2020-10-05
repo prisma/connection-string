@@ -364,7 +364,6 @@ mod test {
 
     #[test]
     fn whitespace() -> crate::Result<()> {
-        dbg!("start");
         let conn: JdbcString =
             r#"jdbc:sqlserver://server\instance:80;key=value;foo=bar;user id=musti naukio"#
                 .parse()?;

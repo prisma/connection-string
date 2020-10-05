@@ -68,7 +68,6 @@ impl FromStr for AdoNetString {
             //  ^^^^^^^^
             let key = read_ident(&mut lexer)?;
             ensure!(!key.is_empty(), "Key must not be empty");
-            dbg!(&key);
 
             // [property=[value][;property=value][;]]
             //          ^

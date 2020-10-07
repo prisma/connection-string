@@ -14,7 +14,7 @@ use crate::{bail, ensure};
 /// ```
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct JdbcString {
-    sub_protocol: &'static str,
+    sub_protocol: String,
     server_name: Option<String>,
     instance_name: Option<String>,
     port: Option<u16>,
@@ -23,7 +23,7 @@ pub struct JdbcString {
 
 impl JdbcString {
     /// Access the connection sub-protocol
-    pub fn sub_protocol(&self) -> &'static str {
+    pub fn sub_protocol(&self) -> &str {
         &self.sub_protocol
     }
 
@@ -64,7 +64,8 @@ impl FromStr for JdbcString {
         let err = "Invalid JDBC sub-protocol";
         cmp_str(&mut lexer, "jdbc", err)?;
         ensure!(lexer.next().kind() == &TokenKind::Colon, err);
-        cmp_str(&mut lexer, "sqlserver", err)?;
+        let sub_protocol = format!("jdbc:{}", read_ident(&mut lexer, err)?);
+
         ensure!(lexer.next().kind() == &TokenKind::Colon, err);
         ensure!(lexer.next().kind() == &TokenKind::FSlash, err);
         ensure!(lexer.next().kind() == &TokenKind::FSlash, err);
@@ -108,6 +109,13 @@ impl FromStr for JdbcString {
         let mut properties = HashMap::new();
         while let TokenKind::Semi = lexer.peek().kind() {
             let _ = lexer.next();
+
+            // Handle trailing semis.
+            if let TokenKind::Eof = lexer.peek().kind() {
+                let _ = lexer.next();
+                break;
+            }
+
             let err = "Invalid property key";
             let key = read_ident(&mut lexer, err)?;
 
@@ -124,7 +132,7 @@ impl FromStr for JdbcString {
         ensure!(token.kind() == &TokenKind::Eof, "Invalid JDBC token");
 
         Ok(Self {
-            sub_protocol: "jdbc:sqlserver",
+            sub_protocol,
             server_name,
             instance_name,
             port,
@@ -162,6 +170,7 @@ fn read_ident(lexer: &mut Lexer, err_msg: &'static str) -> crate::Result<String>
             }
             TokenKind::Atom(c) => output.push(*c),
             _ => {
+                // push the token back in the lexer
                 lexer.push(token);
                 break;
             }
@@ -206,8 +215,7 @@ impl Lexer {
                     }
                     TokenKind::Escaped(buf)
                 }
-                c if c.is_ascii_alphanumeric() => TokenKind::Atom(c),
-                c if c.is_ascii_whitespace() => TokenKind::Atom(c),
+                c if c.is_ascii() => TokenKind::Atom(c),
                 c => bail!("Invalid JDBC token `{}`", c),
             };
             tokens.push(Token { kind, loc });
@@ -354,7 +362,7 @@ mod test {
 
     #[test]
     fn sub_protocol_error() -> crate::Result<()> {
-        let err = r#"jdbc:sqlboo://"#.parse::<JdbcString>().unwrap_err().to_string();
+        let err = r#"jdbq:sqlserver://"#.parse::<JdbcString>().unwrap_err().to_string();
         assert_eq!(
             err.to_string(),
             "Conversion error: Invalid JDBC sub-protocol"
@@ -374,6 +382,26 @@ mod test {
 
         let kv = conn.properties();
         assert_eq!(kv.get("user id"), Some(&"musti naukio".to_string()));
+        Ok(())
+    }
+
+    // Test for dashes and dots in the name, and parse names other than oracle
+    #[test]
+    fn regression_2020_10_06() -> crate::Result<()> {
+        let input = "jdbc:sqlserver://my-server.com:5433;foo=bar";
+        let _conn: JdbcString = input.parse()?;
+
+        let input = "jdbc:oracle://foo.bar:1234";
+        let _conn: JdbcString = input.parse()?;
+
+        Ok(())
+    }
+
+    /// While strictly disallowed, we should not fail if we detect a trailing semi.
+    #[test]
+    fn regression_2020_10_07_handle_trailing_semis() -> crate::Result<()> {
+        let input = "jdbc:sqlserver://my-server.com:5433;foo=bar;";
+        let _conn: JdbcString = input.parse()?;
         Ok(())
     }
 }

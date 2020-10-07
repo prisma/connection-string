@@ -163,11 +163,7 @@ fn read_ident(lexer: &mut Lexer, err_msg: &'static str) -> crate::Result<String>
     loop {
         let token = lexer.next();
         match token.kind() {
-            TokenKind::Escaped(seq) => {
-                output.push('{');
-                output.extend(seq);
-                output.push('}');
-            }
+            TokenKind::Escaped(seq) => output.extend(seq),
             TokenKind::Atom(c) => output.push(*c),
             _ => {
                 // push the token back in the lexer
@@ -351,12 +347,12 @@ mod test {
         let conn: JdbcString =
             r#"jdbc:sqlserver://se{r}ver{;}\instance:80;key={va[]}lue"#.parse()?;
         assert_eq!(conn.sub_protocol(), "jdbc:sqlserver");
-        assert_eq!(conn.server_name(), Some("se{r}ver{;}"));
+        assert_eq!(conn.server_name(), Some("server;"));
         assert_eq!(conn.instance_name(), Some("instance"));
         assert_eq!(conn.port(), Some(80));
 
         let kv = conn.properties();
-        assert_eq!(kv.get("key"), Some(&"{va[]}lue".to_string()));
+        assert_eq!(kv.get("key"), Some(&"va[]lue".to_string()));
         Ok(())
     }
 
@@ -407,6 +403,7 @@ mod test {
         let conn: JdbcString = input.parse()?;
         let props = conn.properties();
         assert_eq!(props.get("user id"), Some(&"musti".to_owned()));
+        assert_eq!(props.get("password"), Some(&"abc;}45}".to_owned()));
         Ok(())
     }
 }

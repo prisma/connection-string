@@ -117,7 +117,7 @@ impl FromStr for JdbcString {
             }
 
             let err = "Invalid property key";
-            let key = read_ident(&mut lexer, err)?;
+            let key = read_ident(&mut lexer, err)?.to_lowercase();
 
             let err = "Property pairs must be joined by a `=`";
             ensure!(lexer.next().kind() == &TokenKind::Eq, err);
@@ -402,6 +402,11 @@ mod test {
     fn regression_2020_10_07_handle_trailing_semis() -> crate::Result<()> {
         let input = "jdbc:sqlserver://my-server.com:5433;foo=bar;";
         let _conn: JdbcString = input.parse()?;
+
+        let input = "jdbc:sqlserver://my-server.com:4200;User ID=musti;Password={abc;}}45}";
+        let conn: JdbcString = input.parse()?;
+        let props = conn.properties();
+        assert_eq!(props.get("user id"), Some(&"musti".to_owned()));
         Ok(())
     }
 }

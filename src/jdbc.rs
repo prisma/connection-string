@@ -46,6 +46,11 @@ impl JdbcString {
     pub fn properties(&self) -> &HashMap<String, String> {
         &self.properties
     }
+
+    /// Mutably access the connection's key-value pairs
+    pub fn properties_mut(&mut self) -> &mut HashMap<String, String> {
+        &mut self.properties
+    }
 }
 
 // NOTE(yosh): Unfortunately we can't parse using `split(';')` because JDBC

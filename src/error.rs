@@ -1,3 +1,4 @@
+use std::error;
 use std::fmt::{self, Display};
 
 /// A connection string error.
@@ -29,3 +30,5 @@ impl Display for Error {
         write!(f, "Conversion error: {}", self.msg)
     }
 }
+
+impl error::Error for Error {}

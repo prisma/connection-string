@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::str::FromStr;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::{bail, ensure};
 
@@ -50,6 +50,30 @@ impl JdbcString {
     /// Mutably access the connection's key-value pairs
     pub fn properties_mut(&mut self) -> &mut HashMap<String, String> {
         &mut self.properties
+    }
+}
+
+/// ```txt
+/// jdbc:sqlserver://[serverName[\instanceName][:portNumber]][;property=value[;property=value]]
+/// ```
+impl Display for JdbcString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}://", self.sub_protocol)?;
+        if let Some(server_name) = &self.server_name {
+            write!(f, "{}", server_name)?;
+        }
+        if let Some(instance_name) = &self.instance_name {
+            write!(f, r#"\{}"#, instance_name)?;
+        }
+        if let Some(port) = self.port {
+            write!(f, ":{}", port)?;
+        }
+
+        for (k, v) in self.properties().iter() {
+            // todo encode v
+            write!(f, "{{{}}}={{{}}}", k, v)?;
+        }
+        Ok(())
     }
 }
 
@@ -409,6 +433,16 @@ mod test {
         let props = conn.properties();
         assert_eq!(props.get("user id"), Some(&"musti".to_owned()));
         assert_eq!(props.get("password"), Some(&"abc;}45}".to_owned()));
+        Ok(())
+    }
+
+    #[test]
+    fn display_with_escaping() -> crate::Result<()> {
+        let input = r#"jdbc:sqlserver://server\instance:80;key=va{[]}lue"#;
+        let conn: JdbcString = input.parse()?;
+
+        let output = r#"jdbc:sqlserver://server\instance:80;{key}={va[]lue}"#;
+        assert_eq!(format!("{}", conn), output);
         Ok(())
     }
 }

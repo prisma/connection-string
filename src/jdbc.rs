@@ -53,25 +53,49 @@ impl JdbcString {
     }
 }
 
-/// ```txt
-/// jdbc:sqlserver://[serverName[\instanceName][:portNumber]][;property=value[;property=value]]
-/// ```
 impl Display for JdbcString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        /// Escape all non-alphanumeric characters in a string..
+        fn escape(s: &str) -> String {
+            let mut output = String::with_capacity(s.len());
+            let mut escaping = false;
+            for b in s.chars() {
+                if b.is_ascii_alphanumeric() {
+                    if escaping {
+                        escaping = false;
+                        output.push('}');
+                    }
+                    output.push(b);
+                } else {
+                    if !escaping {
+                        escaping = true;
+                        output.push('{');
+                    }
+                    output.push(b);
+                }
+            }
+            if escaping {
+                output.push('}');
+            }
+            output
+        }
+
         write!(f, "{}://", self.sub_protocol)?;
         if let Some(server_name) = &self.server_name {
-            write!(f, "{}", server_name)?;
+            write!(f, "{}", escape(server_name))?;
         }
         if let Some(instance_name) = &self.instance_name {
-            write!(f, r#"\{}"#, instance_name)?;
+            write!(f, r#"\{}"#, escape(instance_name))?;
         }
         if let Some(port) = self.port {
             write!(f, ":{}", port)?;
         }
 
-        for (k, v) in self.properties().iter() {
-            // todo encode v
-            write!(f, "{{{}}}={{{}}}", k, v)?;
+        for (i, (k, v)) in self.properties().iter().enumerate() {
+            if i == 0 {
+                write!(f, ";")?;
+            }
+            write!(f, "{}={}", escape(k), escape(v))?;
         }
         Ok(())
     }
@@ -438,11 +462,10 @@ mod test {
 
     #[test]
     fn display_with_escaping() -> crate::Result<()> {
-        let input = r#"jdbc:sqlserver://server\instance:80;key=va{[]}lue"#;
+        let input = r#"jdbc:sqlserver://server{;}\instance:80;key=va{[]}lue"#;
         let conn: JdbcString = input.parse()?;
 
-        let output = r#"jdbc:sqlserver://server\instance:80;{key}={va[]lue}"#;
-        assert_eq!(format!("{}", conn), output);
+        assert_eq!(format!("{}", conn), input);
         Ok(())
     }
 }

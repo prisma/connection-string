@@ -60,16 +60,16 @@ impl Display for JdbcString {
             let mut output = String::with_capacity(s.len());
             let mut escaping = false;
             for b in s.chars() {
-                if b.is_ascii_alphanumeric() {
-                    if escaping {
-                        escaping = false;
-                        output.push('}');
-                    }
-                    output.push(b);
-                } else {
+                if matches!(b, ':' | '=' | '\\' | '/' | ';' | '{' | '}' | '[' | ']') {
                     if !escaping {
                         escaping = true;
                         output.push('{');
+                    }
+                    output.push(b);
+                } else {
+                    if escaping {
+                        escaping = false;
+                        output.push('}');
                     }
                     output.push(b);
                 }
@@ -91,11 +91,8 @@ impl Display for JdbcString {
             write!(f, ":{}", port)?;
         }
 
-        for (i, (k, v)) in self.properties().iter().enumerate() {
-            if i == 0 {
-                write!(f, ";")?;
-            }
-            write!(f, "{}={}", escape(k), escape(v))?;
+        for (k, v) in self.properties().iter() {
+            write!(f, ";{}={}", escape(k.trim()), escape(v.trim()))?;
         }
         Ok(())
     }
@@ -466,6 +463,26 @@ mod test {
         let conn: JdbcString = input.parse()?;
 
         assert_eq!(format!("{}", conn), input);
+        Ok(())
+    }
+
+    // Output was being over-escaped and not split with semis, causing all sorts of uri failures.
+    #[test]
+    fn regression_2020_10_27_dont_escape_underscores_whitespace() -> crate::Result<()> {
+        let input = r#"jdbc:sqlserver://test-db-mssql-2017:1433;user=SA;encrypt=DANGER_PLAINTEXT;isolationlevel=READ UNCOMMITTED;schema=NonEmbeddedUpsertDesignSpec;trustservercertificate=true;password=<YourStrong@Passw0rd>"#;
+        let conn: JdbcString = input.parse()?;
+
+        let output = format!("{}", conn);
+        let mut output: Vec<String> = output.split(';').map(|s| s.to_owned()).collect();
+        output.pop();
+        output.sort();
+
+        let input = format!("{}", conn);
+        let mut input: Vec<String> = input.split(';').map(|s| s.to_owned()).collect();
+        input.pop();
+        input.sort();
+
+        assert_eq!(output, input);
         Ok(())
     }
 }

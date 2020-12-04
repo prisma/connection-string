@@ -29,6 +29,10 @@ mod jdbc;
 #[macro_use]
 mod utils;
 
+#[cfg(feature = "wasm")]
+/// The WASM representations of the connection string structs.
+pub mod wasm;
+
 pub use ado::AdoNetString;
 pub use jdbc::JdbcString;
 

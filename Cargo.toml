@@ -13,8 +13,16 @@ authors = [
     "Yoshua Wuyts <yoshuawuyts@gmail.com>"
 ]
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-mutable-globals"]
+
 [features]
+wasm = ["wasm-bindgen"]
 
 [dependencies]
+wasm-bindgen = { version = "0.2", optional = true }
 
 [dev-dependencies]
+
+[lib]
+crate-type = ["cdylib", "lib"]

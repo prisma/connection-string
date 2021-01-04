@@ -41,9 +41,42 @@
   </h3>
 </div>
 
-## Installation
+## Installation for Rust
 ```sh
 $ cargo add connection-string
+```
+
+## Usage for JavaScript
+The crate is available in npm as `@pimeys/connection-string`. Usage patters try
+to follow the Rust version as close as possible. Please see the [Rust
+docs](https://docs.rs/connection-string) for more information.
+
+JDBC:
+
+``` javascript
+const j = new JdbcString("jdbc:sqlserver://localhost\\INSTANCE:1433;database=master;user=SA;password={my_password;123}");
+
+console.log(j.server_name()); // "localhost"
+console.log(j.port()); // 1433
+console.log(j.instance_name()); // "INSTANCE"
+console.log(j.get("database")); // "master"
+console.log(j.get("password")); // "my_password;123" (see escaping)
+
+console.log(j.set("password", "a;;new;;password")); // "my_password;123" (returns the old value, if available)
+
+// "jdbc:sqlserver://localhost\INSTANCE:1433;user=SA;database=master;password=a{;;}new{;;}password"
+console.log(j.to_string())
+```
+
+ADO.net:
+
+``` javascript
+const a = new AdoNetString("server=tcp:localhost,1433;user=SA;password=a{;;}new{;;}password");
+
+console.log(a.get("password")); // a;;new;;password
+console.log(a.set("user", "john")); // "SA" (returns the old value, if available)
+
+// `to_string()` not yet implemented for ADO.net strings.
 ```
 
 ## Safety

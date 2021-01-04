@@ -125,7 +125,10 @@ impl FromStr for JdbcString {
         //                  ^^^^^^^^^^^
         // ```
         let mut server_name = None;
-        if matches!(lexer.peek().kind(), TokenKind::Atom(_) | TokenKind::Escaped(_)) {
+        if matches!(
+            lexer.peek().kind(),
+            TokenKind::Atom(_) | TokenKind::Escaped(_)
+        ) {
             server_name = Some(read_ident(&mut lexer, "Invalid server name")?);
         }
 

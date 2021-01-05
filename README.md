@@ -76,7 +76,8 @@ const a = new AdoNetString("server=tcp:localhost,1433;user=SA;password=a{;;}new{
 console.log(a.get("password")); // a;;new;;password
 console.log(a.set("user", "john")); // "SA" (returns the old value, if available)
 
-// `to_string()` not yet implemented for ADO.net strings.
+// "server=tcp:localhost,1433;user=john;password=a{;;}new{;;}password"
+console.log(j.to_string())
 ```
 
 ## Safety

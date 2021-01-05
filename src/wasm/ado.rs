@@ -30,4 +30,9 @@ impl AdoNetString {
     pub fn set(&mut self, key: &str, value: &str) -> Option<String> {
         self.inner.insert(key.into(), value.into())
     }
+
+    /// Get a string representation of the `AdoNetString`.
+    pub fn to_string(&self) -> String {
+        format!("{}", self.inner)
+    }
 }

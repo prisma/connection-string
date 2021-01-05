@@ -29,8 +29,8 @@ mod jdbc;
 #[macro_use]
 mod utils;
 
-#[cfg(feature = "wasm")]
 /// The WASM representations of the connection string structs.
+#[cfg(target = "wasm32-unknown-unknown")]
 pub mod wasm;
 
 pub use ado::AdoNetString;

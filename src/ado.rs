@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
+use std::{collections::HashMap, fmt};
 
 use crate::{bail, ensure};
 
@@ -83,6 +83,47 @@ impl FromStr for AdoNetString {
             pairs.insert(key, value);
         }
         Ok(Self { pairs })
+    }
+}
+
+impl fmt::Display for AdoNetString {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        /// Escape all non-alphanumeric characters in a string..
+        fn escape(s: &str) -> String {
+            let mut output = String::with_capacity(s.len());
+            let mut escaping = false;
+            for b in s.chars() {
+                if matches!(b, ':' | '=' | '\\' | '/' | ';' | '{' | '}' | '[' | ']') {
+                    if !escaping {
+                        escaping = true;
+                        output.push('{');
+                    }
+                    output.push(b);
+                } else {
+                    if escaping {
+                        escaping = false;
+                        output.push('}');
+                    }
+                    output.push(b);
+                }
+            }
+            if escaping {
+                output.push('}');
+            }
+            output
+        }
+
+        let total_pairs = self.pairs.len();
+
+        for (i, (k, v)) in self.pairs.iter().enumerate() {
+            write!(f, "{}={}", escape(k.trim()), escape(v.trim()))?;
+
+            if i < total_pairs - 1 {
+                write!(f, ";")?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -412,6 +453,16 @@ mod test {
         assert_kv(&ado, "Data Source", "Oracle9i");
         assert_kv(&ado, "User ID", "*****");
         assert_kv(&ado, "Password", "*****");
+        Ok(())
+    }
+
+    #[test]
+    fn display_with_escaping() -> crate::Result<()> {
+        let input = "key=val{;}ue";
+        let conn: AdoNetString = input.parse()?;
+
+        assert_eq!(format!("{}", conn), input);
+
         Ok(())
     }
 }

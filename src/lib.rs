@@ -30,7 +30,7 @@ mod jdbc;
 mod utils;
 
 /// The WASM representations of the connection string structs.
-#[cfg(target = "wasm32-unknown-unknown")]
+#[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
 pub use ado::AdoNetString;

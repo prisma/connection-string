@@ -29,12 +29,12 @@ impl JdbcString {
 
     /// Access the connection server name
     pub fn server_name(&self) -> Option<&str> {
-        self.server_name.as_ref().map(|s| s.as_str())
+        self.server_name.as_deref()
     }
 
-    /// Access the connection's instance name
+    /// Get a reference to the connection's instance name.
     pub fn instance_name(&self) -> Option<&str> {
-        self.instance_name.as_ref().map(|s| s.as_str())
+        self.instance_name.as_deref()
     }
 
     /// Access the connection's port
@@ -294,7 +294,7 @@ impl Lexer {
     /// Peek at the next token in the queue.
     #[must_use]
     pub(crate) fn peek(&mut self) -> Token {
-        self.tokens.last().map(|t| t.clone()).unwrap_or(Token {
+        self.tokens.last().cloned().unwrap_or(Token {
             kind: TokenKind::Eof,
             loc: Location::default(),
         })
@@ -412,10 +412,7 @@ mod test {
     #[test]
     fn sub_protocol_error() -> crate::Result<()> {
         let err = r#"jdbq:sqlserver://"#.parse::<JdbcString>().unwrap_err().to_string();
-        assert_eq!(
-            err.to_string(),
-            "Conversion error: Invalid JDBC sub-protocol"
-        );
+        assert_eq!(err, "Conversion error: Invalid JDBC sub-protocol");
         Ok(())
     }
 

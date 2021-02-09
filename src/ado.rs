@@ -213,7 +213,7 @@ impl Lexer {
                             // escape sequence or a closing delimiter.
                             Some('"') => match lookahead(&chars) {
                                 Some('"') => {
-                                    if buf.len() == 0 {
+                                    if buf.is_empty() {
                                         break;
                                     }
                                     let _ = chars.next();
@@ -238,7 +238,7 @@ impl Lexer {
                             // escape sequence or a closing delimiter.
                             Some('\'') => match lookahead(&chars) {
                                 Some('\'') => {
-                                    if buf.len() == 0 {
+                                    if buf.is_empty() {
                                         break;
                                     }
                                     let _ = chars.next();
@@ -295,7 +295,7 @@ impl Lexer {
     /// Peek at the next token in the queue.
     #[must_use]
     pub(crate) fn peek(&mut self) -> Token {
-        self.tokens.last().map(|t| t.clone()).unwrap_or(Token {
+        self.tokens.last().cloned().unwrap_or(Token {
             kind: TokenKind::Eof,
             loc: Location::default(),
         })

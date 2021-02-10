@@ -124,12 +124,17 @@ impl FromStr for JdbcString {
         // jdbc:sqlserver://[serverName[\instanceName][:portNumber]][;property=value[;property=value]]
         //                  ^^^^^^^^^^^
         // ```
+        // NOTE: this can also be an IPv6 address.
         let mut server_name = None;
-        if matches!(
-            lexer.peek().kind(),
-            TokenKind::Atom(_) | TokenKind::Escaped(_)
-        ) {
-            server_name = Some(read_ident(&mut lexer, "Invalid server name")?);
+        match lexer.peek().kind() {
+            TokenKind::OpenBracket => {
+                let err_msg = "Invalid server name: invalid IPv6 address";
+                server_name = Some(parse_ipv6(&mut lexer, err_msg)?);
+            }
+            TokenKind::Atom(_) | TokenKind::Escaped(_) => {
+                server_name = Some(read_ident(&mut lexer, "Invalid server name")?);
+            }
+            _ => {}
         }
 
         // ```
@@ -225,10 +230,33 @@ fn read_ident(lexer: &mut Lexer, err_msg: &'static str) -> crate::Result<String>
             }
         }
     }
-    match output.len() {
-        0 => bail!(err_msg),
-        _ => Ok(output),
+    ensure!(!output.is_empty(), err_msg);
+    Ok(output)
+}
+
+/// Read a URL encoded IPv6 sequence into a string.
+///
+/// Example: `[2001:db8:85a3:8d3:1319:8a2e:370:7348]`
+///
+/// See also: https://en.wikipedia.org/wiki/IPv6_address#Literal_IPv6_addresses_in_network_resource_identifiers
+fn parse_ipv6(lexer: &mut Lexer, err_msg: &'static str) -> crate::Result<String> {
+    let _ = lexer.next();
+    let mut output = String::from('[');
+
+    loop {
+        match lexer.next().kind() {
+            TokenKind::Colon => output.push(':'),
+            TokenKind::Atom(c) if c.is_ascii_alphanumeric() => output.push(*c),
+            TokenKind::CloseBracket => {
+                output.push(']');
+                break;
+            }
+            _ => bail!(err_msg),
+        }
     }
+
+    ensure!(!output.is_empty(), err_msg);
+    Ok(output)
 }
 
 #[derive(Debug)]
@@ -251,6 +279,8 @@ impl Lexer {
                 '\\' => TokenKind::BSlash,
                 '/' => TokenKind::FSlash,
                 ';' => TokenKind::Semi,
+                '[' => TokenKind::OpenBracket,
+                ']' => TokenKind::CloseBracket,
                 '{' => {
                     let mut buf = Vec::new();
                     // Read alphanumeric ASCII including whitespace until we find a closing curly.
@@ -330,6 +360,8 @@ impl Token {
 /// The kind of token we're encoding.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum TokenKind {
+    OpenBracket,
+    CloseBracket,
     Colon,
     Eq,
     BSlash,
@@ -367,6 +399,24 @@ mod test {
         assert_eq!(conn.sub_protocol(), "jdbc:sqlserver");
         assert_eq!(conn.server_name(), Some("server"));
         assert_eq!(conn.instance_name(), Some("instance"));
+        Ok(())
+    }
+
+    #[test]
+    fn parse_ipv6_url() -> crate::Result<()> {
+        let input = r#"jdbc:sqlserver://[::1]:1433;database=prisma-demo;user=SA;password=Pr1sm4_Pr1sm4;trustServerCertificate=true;encrypt=true"#;
+        let conn: JdbcString = input.parse()?;
+        assert_eq!(conn.server_name(), Some("[::1]"));
+        assert_eq!(conn.port(), Some(1433));
+
+        let input = r#"jdbc:sqlserver://[:1433;"#;
+        assert!(input.parse::<JdbcString>().is_err());
+
+        let input = r#"jdbc:sqlserver://[0f0f0:f00f==:09:12]:1433;"#;
+        assert!(input.parse::<JdbcString>().is_err());
+
+        let input = r#"jdbc:sqlserver://]:1433;"#;
+        assert!(input.parse::<JdbcString>().is_err());
         Ok(())
     }
 

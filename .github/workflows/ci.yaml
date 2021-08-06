@@ -47,6 +47,7 @@ jobs:
         command: test
         args: --all
 
+    - run: cargo install wasm-pack
     - name: build for nodejs
       run: wasm-pack build -t nodejs -- --features wasm
       

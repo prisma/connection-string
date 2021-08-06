@@ -56,6 +56,7 @@ jobs:
         rust: [stable]
 
     steps:
+    - uses: actions/checkout@master
     - run: npx wasm-pack build -t nodejs
     - uses: actions/upload-artifact@v2
       if: success()

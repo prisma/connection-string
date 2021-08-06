@@ -47,9 +47,17 @@ jobs:
         command: test
         args: --all
 
+  build_node:
+    name: Build Node package
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [stable]
+
+    steps:
     - run: cargo install wasm-pack
-    - name: build for nodejs
-      run: wasm-pack build -t nodejs
+    - run: wasm-pack build -t nodejs
     - uses: actions/upload-artifact@v2
       if: success()
       with:

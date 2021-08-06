@@ -46,6 +46,9 @@ jobs:
         command: test
         args: --all
 
+    - name: build for nodejs
+      run: wasm-pack build -t nodejs -- --features wasm
+      
   check_fmt_and_docs:
     name: Checking fmt and docs
     runs-on: ubuntu-latest

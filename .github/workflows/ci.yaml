@@ -35,7 +35,6 @@ jobs:
         args: --all --bins --examples
 
     - name: check unstable
-      continue-on-error: true
       uses: actions-rs/cargo@v1
       with:
         command:  check

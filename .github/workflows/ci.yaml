@@ -49,7 +49,7 @@ jobs:
 
     - run: cargo install wasm-pack
     - name: build for nodejs
-      run: wasm-pack build -t nodejs -- --target wasm32-unknown-unknown
+      run: wasm-pack build -t nodejs
       
   check_fmt_and_docs:
     name: Checking fmt and docs

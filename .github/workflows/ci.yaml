@@ -50,7 +50,13 @@ jobs:
     - run: cargo install wasm-pack
     - name: build for nodejs
       run: wasm-pack build -t nodejs
-      
+    - uses: actions/upload-artifact@v2
+      if: success()
+      with:
+        name: node-${{ matrix.os }}
+        path: |
+          ${{ github.workspace }}/connection-string/pkg/*
+
   check_fmt_and_docs:
     name: Checking fmt and docs
     runs-on: ubuntu-latest

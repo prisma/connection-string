@@ -55,7 +55,7 @@ jobs:
       with:
         name: node-${{ matrix.os }}
         path: |
-          ${{ github.workspace }}/connection-string/pkg/*
+          ${{ github.workspace }}/pkg/*
 
   check_fmt_and_docs:
     name: Checking fmt and docs

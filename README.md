@@ -95,6 +95,59 @@ look at some of these issues:
 [good-first-issue]: https://github.com/prisma/connection-string/labels/good%20first%20issue
 [help-wanted]: https://github.com/prisma/connection-string/labels/help%20wanted
 
+## Building
+
+The build procedure and dependencies are defined in the provided
+[flake.nix](flake.nix) file. Please install the unstable Nix with flakes support
+([Linux](https://nixos.wiki/wiki/Nix_Installation_Guide), [macOS](https://gist.github.com/sagittaros/32dc6ffcbc423dc0fed7eef24698d5ca)).
+
+The WASM module can be built with:
+
+```bash
+nix build
+```
+
+This creates a link `result` to the current directory, containing a NodeJS
+package with the Rust code compiled as WASM bytecode.
+
+## Testing
+
+Run the tests with the nix subcommand:
+
+```bash
+nix run .#test
+```
+
+## Publishing
+
+The `updatePackageVersion` command changes the package version to the Rust `Cargo.toml` and
+JavaScript `package.json` at the same time:
+
+```bash
+nix run .#updatePackageVersion 0.1.14
+```
+
+Don't forget to add the tag before publishing the library:
+
+```bash
+git tag v0.1.14
+```
+
+The publishing can be done separately or together with the `publish` command:
+
+```bash
+nix run .#publishRust
+nix run .#publishJavascript
+```
+
+or
+
+```bash
+nix run .#publish
+```
+
+Please be sure you have the corresponding publishing rights in crates and npmjs.
+
 ## License
 
 <sup>

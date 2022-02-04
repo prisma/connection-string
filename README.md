@@ -61,7 +61,7 @@ console.log(j.port()); // 1433
 console.log(j.instance_name()); // "INSTANCE"
 console.log(j.get("database")); // "master"
 console.log(j.get("password")); // "my_password;123" (see escaping)
-
+console.log(j.keys()); // ["database", "user", "password"]
 console.log(j.set("password", "a;;new;;password")); // "my_password;123" (returns the old value, if available)
 
 // "jdbc:sqlserver://localhost\INSTANCE:1433;user=SA;database=master;password=a{;;}new{;;}password"

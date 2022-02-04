@@ -51,6 +51,11 @@ impl JdbcString {
     pub fn properties_mut(&mut self) -> &mut HashMap<String, String> {
         &mut self.properties
     }
+
+    /// Get an iterator over all keys from the connection's key-value pairs
+    pub fn keys(&self) -> impl ExactSizeIterator<Item = &str> + '_ {
+        self.properties.keys().map(AsRef::as_ref)
+    }
 }
 
 impl Display for JdbcString {
@@ -382,6 +387,20 @@ mod test {
     fn parse_sub_protocol() -> crate::Result<()> {
         let conn: JdbcString = "jdbc:sqlserver://".parse()?;
         assert_eq!(conn.sub_protocol(), "jdbc:sqlserver");
+        Ok(())
+    }
+
+    #[test]
+    fn keys() -> crate::Result<()> {
+        let input = r#"jdbc:sqlserver://server:1433;database=prisma-demo;user=SA;password=Pr1sm4_Pr1sm4;trustServerCertificate=true;encrypt=true"#;
+        let conn: JdbcString = input.parse()?;
+        let keys = conn.keys().collect::<Vec<&str>>();
+        assert_eq!(keys.len(), 5);
+        assert!(keys.contains(&"database"));
+        assert!(keys.contains(&"user"));
+        assert!(keys.contains(&"password"));
+        assert!(keys.contains(&"trustservercertificate"));
+        assert!(keys.contains(&"encrypt"));
         Ok(())
     }
 

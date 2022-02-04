@@ -1,4 +1,5 @@
 use wasm_bindgen::prelude::*;
+use js_sys::Array;
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -41,6 +42,15 @@ impl JdbcString {
     /// Access the connection's port
     pub fn port(&self) -> Option<u16> {
         self.inner.port()
+    }
+
+    /// Get all keys from the connection's key-value pairs
+    pub fn keys(&self) -> Array {
+        self.inner
+            .properties()
+            .iter()
+            .map(|(k, _)| JsValue::from(k))
+            .collect::<Array>()
     }
 
     /// Get a parameter from the connection's key-value pairs

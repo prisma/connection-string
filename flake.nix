@@ -64,7 +64,7 @@
           ${rust}/bin/cargo publish
         '';
         publishJavascript = pkgs.writeShellScriptBin "publishRust" ''
-          nix build
+          ${pkgs.nixFlakes}/bin/nix build
           ${nodejs}/bin/npm publish ./result --access public --tag latest
         '';
         npm = {

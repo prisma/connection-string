@@ -35,7 +35,7 @@
       Releases
     </a>
     <span> | </span>
-    <a href="https://github.com/prisma/connection-string/blob/master.github/CONTRIBUTING.md">
+    <a href="https://github.com/prisma/connection-string/blob/main.github/CONTRIBUTING.md">
       Contributing
     </a>
   </h3>

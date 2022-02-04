@@ -26,7 +26,7 @@
           lockFile = ./Cargo.lock;
         };
 
-        nativeBuildInputs = [ rust wasm-bindgen-cli nodejs ];
+        nativeBuildInputs = [ rust wasm-bindgen-cli ];
 
         buildPhase = ''
           RUST_BACKTRACE=1
@@ -64,6 +64,7 @@
           ${rust}/bin/cargo publish
         '';
         publishJavascript = pkgs.writeShellScriptBin "publishRust" ''
+          nix build
           ${nodejs}/bin/npm publish ./result --access public --tag latest
         '';
         npm = {
@@ -81,10 +82,10 @@
       };
       devShell = pkgs.mkShell {
         nativeBuildInputs = [ pkgs.bashInteractive ];
-        buildInputs = with pkgs; [
-          nodePackages.prisma
-          nodePackages.npm
-          nodejs-slim
+        buildInputs = [
+          rust
+          pkgs.nodejs
+          pkgs.wasm-bindgen-cli
         ];
       };
     });

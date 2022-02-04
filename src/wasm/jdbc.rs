@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use js_sys::Array;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -47,9 +47,8 @@ impl JdbcString {
     /// Get all keys from the connection's key-value pairs
     pub fn keys(&self) -> Array {
         self.inner
-            .properties()
-            .iter()
-            .map(|(k, _)| JsValue::from(k))
+            .keys()
+            .map(|k| JsValue::from(k))
             .collect::<Array>()
     }
 

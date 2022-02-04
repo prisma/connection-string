@@ -19,7 +19,7 @@
 //! ```
 
 #![forbid(unsafe_code, rust_2018_idioms)]
-#![deny(missing_debug_implementations, nonstandard_style)]
+#![deny(warnings, missing_debug_implementations, nonstandard_style)]
 #![warn(missing_docs, future_incompatible, unreachable_pub)]
 
 mod ado;

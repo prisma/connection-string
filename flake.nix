@@ -16,6 +16,7 @@
       overlays = [ (import rust-overlay) ];
       pkgs = import nixpkgs { inherit system overlays; };
       rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+      nix = pkgs.nixFlakes;
       inherit (pkgs) wasm-bindgen-cli rustPlatform nodejs;
     in {
       defaultPackage = rustPlatform.buildRustPackage {
@@ -29,7 +30,9 @@
         nativeBuildInputs = [ rust wasm-bindgen-cli ];
 
         buildPhase = ''
-          RUST_BACKTRACE=1
+          export RUSTFLAGS="-Dwarnings"
+          export RUST_BACKTRACE=1
+
           cargo build --release --target=wasm32-unknown-unknown
           echo 'Creating out dir...'
           mkdir -p $out/src;
@@ -60,12 +63,22 @@
           cp /tmp/package.json package.json
           sed -i "s/^version\ =.*$/version = \"$1\"/" Cargo.toml
         '';
+        test = pkgs.writeShellScriptBin "test" ''
+          export RUSTFLAGS="-Dwarnings"
+          export RUST_BACKTRACE=1
+
+          ${rust}/bin/cargo test
+        '';
         publishRust = pkgs.writeShellScriptBin "publishRust" ''
           ${rust}/bin/cargo publish
         '';
         publishJavascript = pkgs.writeShellScriptBin "publishRust" ''
-          ${pkgs.nixFlakes}/bin/nix build
+          ${nix}/bin/nix build
           ${nodejs}/bin/npm publish ./result --access public --tag latest
+        '';
+        publish = pkgs.writeShellScriptBin "publish" ''
+          ${nix}/bin/nix publishRust
+          ${nix}/bin/nix publishJavascript
         '';
         npm = {
           type = "app";

@@ -4,61 +4,84 @@ on:
   pull_request:
   push:
     branches:
-      - staging
-      - trying
+      - main
 
 env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-  build_and_test:
-    name: Build and test
+  build_and_test_linux:
+    name: Build and test on Linux
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        rust: [1.46]
+        os: [ubuntu-latest]
 
     steps:
     - uses: actions/checkout@main
 
-    - name: Install ${{ matrix.rust }}
-      uses: actions-rs/toolchain@v1
+    - uses: cachix/install-nix-action@v16
       with:
-        toolchain: ${{ matrix.rust }}
-        override: true
+        install_url: https://nixos-nix-install-tests.cachix.org/serve/vij683ly7sl95nnhb67bdjjfabclr85m/install
+        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-    - name: check
-      uses: actions-rs/cargo@v1
+    - name: Build WASM Library
+      run: nix build
+
+    - name: Run Tests
+      run: nix run .#test
+
+  build_and_test_macos:
+    name: Build and test on macOS
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+
+    steps:
+    - uses: actions/checkout@main
+
+    - uses: cachix/install-nix-action@v16
       with:
-        command: check
-        args: --all --bins --examples
+        install_url: https://nixos-nix-install-tests.cachix.org/serve/vij683ly7sl95nnhb67bdjjfabclr85m/install
+        install_options: '--tarball-url-prefix https://nixos-nix-install-tests.cachix.org/serve'
+        extra_nix_config: |
+          experimental-features = nix-command flakes
+          access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-    - name: check unstable
-      uses: actions-rs/cargo@v1
-      with:
-        command:  check
-        args: --all --benches --bins --examples --tests
+    - name: Build WASM Library
+      run: nix build
 
-    - name: tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --all
+    - name: Run Tests
+      run: nix run .#test
 
-  check_fmt_and_docs:
-    name: Checking fmt and docs
+  clippy:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-Dwarnings"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            components: clippy
+            override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+  format:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@main
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        components: rustfmt, clippy
-        override: true
-
-    - name: fmt
-      run: cargo fmt --all -- --check
-
-    - name: Docs
-      run: cargo doc
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          override: true
+      - name: Check formatting
+        run: cargo fmt -- --check

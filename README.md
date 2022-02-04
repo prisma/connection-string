@@ -1,7 +1,7 @@
 <h1 align="center">connection-string</h1>
 <div align="center">
   <strong>
-    Connection string parsing in Rust
+    ADO.net and JDBC connection string parsing in Rust and JavaScript
   </strong>
 </div>
 

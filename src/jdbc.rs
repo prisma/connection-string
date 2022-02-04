@@ -351,6 +351,7 @@ impl Location {
 /// A pair of `Location` and `TokenKind`.
 #[derive(Debug, Clone)]
 struct Token {
+    #[allow(dead_code)] // for future use...
     loc: Location,
     kind: TokenKind,
 }

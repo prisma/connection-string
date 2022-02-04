@@ -164,6 +164,7 @@ fn read_ident(lexer: &mut Lexer) -> crate::Result<String> {
 #[derive(Debug, Clone)]
 struct Token {
     kind: TokenKind,
+    #[allow(dead_code)] // for future use...
     loc: Location,
 }
 

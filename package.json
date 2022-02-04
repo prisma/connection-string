@@ -1,0 +1,16 @@
+{
+  "name": "@pimeys/connection-string",
+  "version": "0.1.14",
+  "description": "A parser for ADO.net and JDBC connection strings",
+  "main": "src/connection_string.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prisma/connection-string"
+  },
+  "author": "Prisma",
+  "license": "MIT OR Apache-2.0",
+  "homepage": "https://github.com/prisma/connection-string"
+}

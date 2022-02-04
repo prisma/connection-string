@@ -20,14 +20,14 @@ macro_rules! ensure {
 #[macro_export]
 macro_rules! bail {
     ($msg:literal) => {
-        return Err($crate::Error::new($msg.into()));
+        return Err($crate::Error::new($msg.into()))
     };
 
     ($msg:expr) => {
-        return Err($crate::Error::new($msg.into()));
+        return Err($crate::Error::new($msg.into()))
     };
 
     ($fmt:expr, $($arg:tt)*) => {
-        return Err($crate::Error::new(&*format!($fmt, $($arg)*)));
+        return Err($crate::Error::new(&*format!($fmt, $($arg)*)))
     };
 }

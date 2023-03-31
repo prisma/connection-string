@@ -44,7 +44,7 @@
           wasm-bindgen \
             --target nodejs \
             --out-dir $out/src \
-            target/wasm32-unknown-unknown/release/connection_string.wasm;
+            target/wasm32-unknown-unknown/release/connection_string_wasm.wasm;
         '';
         checkPhase = "echo 'Check phase: skipped'";
         installPhase = "echo 'Install phase: skipped'";

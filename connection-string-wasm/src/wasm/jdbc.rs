@@ -1,3 +1,4 @@
+use connection_string::JdbcString as BaseJdbcString;
 use js_sys::Array;
 use wasm_bindgen::prelude::*;
 
@@ -5,7 +6,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug)]
 /// A version of `JdbcString` to be used from web-assembly.
 pub struct JdbcString {
-    inner: crate::jdbc::JdbcString,
+    inner: BaseJdbcString,
 }
 
 #[wasm_bindgen]

@@ -1,10 +1,11 @@
+use connection_string::AdoNetString as BaseAdoNetString;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[derive(Debug)]
 /// A version of `JdbcString` to be used from web-assembly.
 pub struct AdoNetString {
-    inner: crate::ado::AdoNetString,
+    inner: BaseAdoNetString,
 }
 
 #[wasm_bindgen]

@@ -20,11 +20,11 @@
       inherit (pkgs) wasm-bindgen-cli rustPlatform nodejs;
     in {
       defaultPackage = rustPlatform.buildRustPackage {
-        name = "connection-string";
-        src = builtins.path { path = ./.; name = "connection-string"; };
+        name = "connection-string-wasm";
+        src = builtins.path { path = ./connection-string-wasm; name = "connection-string-wasm"; };
 
         cargoLock = {
-          lockFile = ./Cargo.lock;
+          lockFile = ./connection-string-wasm/Cargo.lock;
         };
 
         nativeBuildInputs = [ rust wasm-bindgen-cli ];
@@ -44,7 +44,7 @@
           wasm-bindgen \
             --target nodejs \
             --out-dir $out/src \
-            target/wasm32-unknown-unknown/release/connection_string.wasm;
+            target/wasm32-unknown-unknown/release/connection_string_wasm.wasm;
         '';
         checkPhase = "echo 'Check phase: skipped'";
         installPhase = "echo 'Install phase: skipped'";

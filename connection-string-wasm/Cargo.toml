@@ -1,0 +1,25 @@
+[package]
+name = "connection-string-wasm"
+version = "0.2.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/prisma/connection-string"
+documentation = "https://docs.rs/connection-string"
+description = "Connection string parsing in Rust (and WebAssembly)"
+readme = "README.md"
+edition = "2021"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-mutable-globals"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "=0.2.79"
+js-sys = "0.3.56"
+connection-string = "0.2"
+
+[dev-dependencies]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[profile.release]
+lto = true
